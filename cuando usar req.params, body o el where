@@ -1,0 +1,87 @@
+Markdown
+# 📝 Guía Rápida: `req.params`, `req.body` y `where`
+
+Cuando trabajamos con Express y Sequelize (Node.js), es muy común confundir de dónde vienen los datos y cómo se los pasamos a la base de datos. 
+
+Piensa en una carta que envías por correo:
+* **`req.params`** es la dirección escrita en el sobre (a quién va dirigida).
+* **`req.body`** es el contenido de la carta (la información nueva que envías).
+* **`where`** es el archivero buscando en sus cajones la carta exacta.
+
+---
+
+## 1. `req.params` (El "Quién" o "Cuál")
+Se utiliza para extraer datos que el cliente envía directamente **en la URL** de la petición. Sirve para identificar un recurso específico.
+
+* **¿Cuándo se usa?** Principalmente en peticiones `GET`, `PUT`, `PATCH` o `DELETE` donde necesitas apuntar a un ID concreto.
+* **¿Cómo se ve en la ruta?** `/restaurants/:restaurantId/schedules`
+
+**Ejemplo de uso:**
+```javascript
+// Ruta: GET /restaurants/5
+exports.show = async function (req, res) {
+  // Sacamos el número 5 de la URL
+  const id = req.params.restaurantId; 
+  // ...
+}
+2. req.body (El "Qué")
+Se utiliza para acceder a los datos nuevos que el cliente (el frontend, Postman, etc.) envía en el "cuerpo" de la petición.
+
+¿Cuándo se usa? Principalmente en peticiones POST (para crear) o PUT/PATCH (para actualizar).
+
+Importante: Nunca mandes información sensible (como contraseñas en texto plano) y siempre valida lo que te llega.
+
+Ejemplo de uso:
+
+JavaScript
+// Ruta: POST /products
+exports.create = async function (req, res) {
+  const newProductData = {
+    name: req.body.name,
+    price: req.body.price,
+    scheduleId: req.body.scheduleId // Dato nuevo que el usuario quiere guardar
+  }
+  // ...
+}
+3. where (El "Filtro de la Base de Datos")
+A diferencia de los dos anteriores (que son de Express), where es una propiedad de Sequelize. Se usa solo cuando hablas con la base de datos para filtrar resultados, como un WHERE en SQL.
+
+¿Cuándo se usa? Dentro de las funciones del modelo de Sequelize como findAll(), findOne(), update(), o destroy().
+
+Ejemplo de uso (combinando todo):
+
+JavaScript
+// Ruta: GET /restaurants/:restaurantId/schedules
+exports.index = async function (req, res) {
+  try {
+    const schedules = await Schedule.findAll({
+      where: { 
+        // "Busca en la BD donde la columna restaurantId 
+        // sea igual al número que viene en la URL"
+        restaurantId: req.params.restaurantId 
+      }
+    })
+    res.json(schedules)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+💡 Resumen visual en un endpoint de actualización (PUT)
+Imagina que quieres actualizar el precio de un producto específico:
+PUT /products/:productId
+
+req.params.productId: Te dice cuál producto actualizar (ej. el producto 10).
+
+req.body.price: Te da el nuevo valor (ej. 15.99€).
+
+where: Le dice a la base de datos dónde aplicar ese nuevo valor.
+
+JavaScript
+exports.update = async function (req, res) {
+  await Product.update(
+    { price: req.body.price }, // Lo que actualizamos (req.body)
+    { 
+      where: { id: req.params.productId } // A quién se lo actualizamos (req.params + where)
+    }
+  );
+}
